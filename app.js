@@ -1,54 +1,74 @@
 const Koa = require("koa");
 const koaBody = require("koa-body");
 const AWS = require("aws-sdk");
-const bucketName = "anni-jmh";
 const Router = require("koa-router");
 
 const { PORT = 3000 } = process.env;
 const app = new Koa();
 const s3 = new AWS.S3();
 const router = new Router();
+const bucketName = "annij";
+const region = "us-west-2";
 
-async function saveJSONFile(
-  fileName = "database.json",
-  Body = '{ "foo": "bar" }'
-) {
+function getObjectKey(fileName) {
+  const key = fileName || Date.now().toString();
+  const objectKey = key.endsWith(".json") ? key : `${key}.json`;
+  return objectKey;
+}
+
+async function saveProjectJSON(fileName, Body = "{}") {
+  const objectKey = getObjectKey(fileName);
   var params = {
     Bucket: bucketName,
-    Key: fileName,
+    Key: objectKey,
     Body,
     ACL: "public-read",
-    region: "us-west-2"
+    ContentType: "application/json"
   };
-  await s3.putObject(params, function(err, data) {
-    if (err) console.log(err);
-    else
-      console.log(
-        "Successfully uploaded data to " + bucketName + "/" + fileName
-      );
-  });
+
+  try {
+    await s3.putObject(params).promise();
+    return {
+      url: `https://s3-${region}.amazonaws.com/${bucketName}/${objectKey}`
+    };
+  } catch (e) {
+    console.log(e);
+    return e.message;
+  }
+}
+
+async function removeProjectJSON(fileName) {
+  const objectKey = getObjectKey(fileName);
+  var params = {
+    Bucket: bucketName,
+    Key: objectKey
+  };
+
+  try {
+    await s3.deleteObject(params).promise();
+    return { message: `${objectKey} deleted` };
+  } catch (e) {
+    return e;
+  }
 }
 
 app
   .use(
     koaBody({
-      jsonLimit: "1kb"
+      jsonLimit: "100kb"
     })
   )
   .use(router.routes())
   .use(router.allowedMethods());
 
-// app.use(async ctx => {
-//   const body = ctx.request.body;
-//   console.log(body.name);
-//   if (!body.name) ctx.throw(400, ".name required");
-//   ctx.body = { name: body.name.toUpperCase() };
-// });
-
 router.post("/projects", async (ctx, next) => {
   const body = ctx.request.body;
-  await saveJSONFile(body.name, JSON.stringify(body.data));
-  ctx.body = "done?";
+  ctx.body = await saveProjectJSON(body.name, JSON.stringify(body.data));
+});
+
+router.del("/projects/:key", async (ctx, next) => {
+  const body = ctx.request.body;
+  ctx.body = await removeProjectJSON(ctx.params.key);
 });
 
 app.listen(PORT);

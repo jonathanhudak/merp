@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Merp</title>
+  </head>
+  <body>
+    <script>
+      function getJSON(url) {
+        try {
+          return fetch(url)
+            .then(function(response) {
+              if (response.status === 200) {
+                return response.json();
+              }
+            })
+            .catch(e => {
+              throw e;
+            })
+            .then(function(myJson) {
+              if (!myJson) return;
+              const p = document.createElement("pre");
+              p.innerText = JSON.stringify(myJson, null, 2);
+              document.body.appendChild(p);
+            });
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      fetch("./demo.json")
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function({ urls }) {
+          urls.forEach(getJSON);
+        });
+    </script>
+  </body>
+</html>
