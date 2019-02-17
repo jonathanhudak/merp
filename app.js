@@ -16,20 +16,23 @@ function getObjectKey(fileName) {
   return objectKey;
 }
 
-async function saveProjectJSON(fileName, Body = "{}") {
-  const objectKey = getObjectKey(fileName);
-  var params = {
+function getPutObjectParams({ name, data }) {
+  const objectKey = getObjectKey(name);
+  return {
     Bucket: bucketName,
     Key: objectKey,
-    Body,
+    Body: data || {},
     ACL: "public-read",
     ContentType: "application/json"
   };
+}
 
+async function saveProjectJSON(requestBody) {
   try {
+    const params = getPutObjectParams(requestBody);
     await s3.putObject(params).promise();
     return {
-      url: `https://s3-${region}.amazonaws.com/${bucketName}/${objectKey}`
+      url: `https://s3-${region}.amazonaws.com/${params.Bucket}/${params.Key}`
     };
   } catch (e) {
     console.log(e);
@@ -62,13 +65,20 @@ app
   .use(router.allowedMethods());
 
 router.post("/projects", async (ctx, next) => {
-  const body = ctx.request.body;
-  ctx.body = await saveProjectJSON(body.name, JSON.stringify(body.data));
+  const requestBody = ctx.request.body;
+  if (typeof requestBody.data !== "string") {
+    ctx.throw(400, "Expected data param to be a string");
+  }
+  ctx.body = await saveProjectJSON(requestBody);
 });
 
 router.del("/projects/:key", async (ctx, next) => {
-  const body = ctx.request.body;
   ctx.body = await removeProjectJSON(ctx.params.key);
 });
 
-app.listen(PORT);
+if (!module.parent) app.listen(PORT);
+
+module.exports = {
+  app,
+  getPutObjectParams
+};

@@ -4,7 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon app"
+    "start": "nodemon app",
+    "test": "mocha --harmony --reporter spec --require should ./*.test.js"
   },
   "author": "",
   "license": "ISC",
@@ -14,5 +15,14 @@
     "koa-body": "^4.0.8",
     "koa-router": "^7.4.0",
     "nodemon": "^1.18.10"
+  },
+  "devDependencies": {
+    "aws-sdk-mock": "^4.3.1",
+    "expect": "^24.1.0",
+    "mocha": "^5.2.0",
+    "mock-require": "^3.0.3",
+    "should": "^13.2.3",
+    "sinon": "^7.2.3",
+    "supertest": "^3.4.2"
   }
 }
